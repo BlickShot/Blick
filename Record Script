@@ -2,5 +2,3 @@
 
 
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/BlickShot/Record-Script/main/Reclrd"))()
-
