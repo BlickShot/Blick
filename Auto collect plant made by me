@@ -1,0 +1,77 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local AUTO_COLLECT_RANGE = 25
+local isCollecting = false
+
+-- Anti-Tamper Container
+local container = Instance.new("Folder")
+container.Name = "AutoCollectContainer"
+container.Parent = player:WaitForChild("PlayerGui") -- Secured under PlayerGui for obfuscation compatibility
+
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoCollectGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = container -- Secure GUI for anti-tamper
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 140, 0, 60)
+frame.Position = UDim2.new(0.5, -70, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(1, -10, 0, 40)
+toggleBtn.Position = UDim2.new(0, 5, 0, 10)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Text = "Auto Collect: OFF"
+toggleBtn.Parent = frame
+
+-- Auto collect logic
+local function activateNearbyPrompts()
+	for _, obj in pairs(workspace:GetDescendants()) do
+		if obj:IsA("ProximityPrompt") and obj.Enabled then
+			local parentPart = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart")
+			if parentPart and (parentPart.Position - hrp.Position).Magnitude <= AUTO_COLLECT_RANGE then
+				pcall(function()
+					fireproximityprompt(obj)
+				end)
+			end
+		end
+	end
+end
+
+local function autoFireRemoteEvents()
+	for _, remote in pairs(game:GetDescendants()) do
+		if remote:IsA("RemoteEvent") and (remote.Name:lower():find("collect") or remote.Name:lower():find("harvest")) then
+			pcall(function()
+				remote:FireServer()
+			end)
+		end
+	end
+end
+
+-- Main collection loop
+task.spawn(function()
+	while true do
+		if isCollecting then
+			activateNearbyPrompts()
+			autoFireRemoteEvents()
+		end
+		task.wait(0.5)
+	end
+end)
+
+-- Toggle logic
+toggleBtn.MouseButton1Click:Connect(function()
+	isCollecting = not isCollecting
+	toggleBtn.Text = "Auto Collect: " .. (isCollecting and "ON" or "OFF")
+	toggleBtn.BackgroundColor3 = isCollecting and Color3.fromRGB(40, 120, 40) or Color3.fromRGB(70, 70, 70)
+end)
